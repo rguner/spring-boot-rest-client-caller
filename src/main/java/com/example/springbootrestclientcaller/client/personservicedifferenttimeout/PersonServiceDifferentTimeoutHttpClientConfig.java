@@ -16,8 +16,12 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 @Configuration
 public class PersonServiceDifferentTimeoutHttpClientConfig {
+
 
     @Value("${person.service.host.url:http://localhost:8080}")
     private String personServiceHostUrl;
@@ -28,50 +32,46 @@ public class PersonServiceDifferentTimeoutHttpClientConfig {
     @Value("${person.service.host.password:pass}")
     private String personServiceHostPassword;
 
-    @Value("${person.service.ws.timeout:60000}")
-    private long personServiceWsTimeout;
-
     @Value("${person.service.ws.socket.timeout:10000}")
     private long personServiceWsSocketTimeout;
 
+    Map<Long, PersonServiceDifferentTimeoutRestClient> restClientMap = new ConcurrentHashMap<>();
 
-    private CloseableHttpClient httpClient() {
-
+    private CloseableHttpClient createHttpClient(long timeout) {
         RequestConfig requestConfig = RequestConfig.custom()
-            .setConnectionRequestTimeout(Timeout.ofMilliseconds(personServiceWsTimeout))
-            .setResponseTimeout(Timeout.ofMilliseconds(personServiceWsTimeout)).build();
+                .setConnectionRequestTimeout(Timeout.ofMilliseconds(timeout))
+                .setResponseTimeout(Timeout.ofMilliseconds(timeout))
+                .build();
 
         PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
         connectionManager.setDefaultSocketConfig(
-            SocketConfig.custom()
-                .setSoTimeout(
-                    Timeout.ofMilliseconds(personServiceWsSocketTimeout)) // Socket timeout
-                .build()
+                SocketConfig.custom()
+                        .setSoTimeout(Timeout.ofMilliseconds(personServiceWsSocketTimeout))
+                        .build()
         );
 
         return HttpClients.custom()
-            .setConnectionManager(connectionManager)
-            .setDefaultRequestConfig(requestConfig)
-            .build();
+                .setConnectionManager(connectionManager)
+                .setDefaultRequestConfig(requestConfig)
+                .build();
     }
 
-    private HttpServiceProxyFactory httpServiceProxyFactory() {
+    private HttpServiceProxyFactory createProxyFactory(long timeout) {
         RestClient restClient = RestClient.builder()
-            .baseUrl(personServiceHostUrl)
-            .requestFactory(new HttpComponentsClientHttpRequestFactory(httpClient()))
-            .requestInterceptors(consumerList -> {
-                consumerList.add(new BasicAuthenticationInterceptor(personServiceHostUsername,
-                        personServiceHostPassword));
-                consumerList.add(new HttpLoggingInterceptor());
-            })
-            .build();
+                .baseUrl(personServiceHostUrl)
+                .requestFactory(new HttpComponentsClientHttpRequestFactory(createHttpClient(timeout)))
+                .requestInterceptors(consumerList -> {
+                    consumerList.add(new BasicAuthenticationInterceptor(personServiceHostUsername, personServiceHostPassword));
+                    consumerList.add(new HttpLoggingInterceptor());
+                })
+                .build();
 
-        return HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient))
-            .build();
+        return HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient)).build();
     }
 
-    @Bean("personServiceDifferentTimeoutRestClient")
-    public PersonServiceDifferentTimeoutRestClient getPersonServiceRestClient() {
-        return httpServiceProxyFactory().createClient(PersonServiceDifferentTimeoutRestClient.class);
+
+    public PersonServiceDifferentTimeoutRestClient getPersonServiceRestClient(long timeout) {
+        return restClientMap.computeIfAbsent(timeout,
+                k -> createProxyFactory(timeout).createClient(PersonServiceDifferentTimeoutRestClient.class));
     }
 }
