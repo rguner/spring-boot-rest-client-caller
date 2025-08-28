@@ -1,6 +1,7 @@
 package com.example.springbootrestclientcaller.client.personservicedifferenttimeout;
 
 import com.example.springbootrestclientcaller.client.HttpLoggingInterceptor;
+import com.example.springbootrestclientcaller.config.TimeoutConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
@@ -35,18 +36,18 @@ public class PersonServiceDifferentTimeoutHttpClientConfig {
     @Value("${person.service.ws.socket.timeout:10000}")
     private long personServiceWsSocketTimeout;
 
-    Map<Long, PersonServiceDifferentTimeoutRestClient> restClientMap = new ConcurrentHashMap<>();
+    Map<TimeoutConfig, PersonServiceDifferentTimeoutRestClient> restClientMap = new ConcurrentHashMap<>();
 
-    private CloseableHttpClient createHttpClient(long timeout) {
+    private CloseableHttpClient createHttpClient(TimeoutConfig timeoutConfig) {
         RequestConfig requestConfig = RequestConfig.custom()
-                .setConnectionRequestTimeout(Timeout.ofMilliseconds(timeout))
-                .setResponseTimeout(Timeout.ofMilliseconds(timeout))
+                .setConnectionRequestTimeout(Timeout.ofMilliseconds(timeoutConfig.getRequestTimeout()))
+                .setResponseTimeout(Timeout.ofMilliseconds(timeoutConfig.getResponseTimeout()))
                 .build();
 
         PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
         connectionManager.setDefaultSocketConfig(
                 SocketConfig.custom()
-                        .setSoTimeout(Timeout.ofMilliseconds(personServiceWsSocketTimeout))
+                        .setSoTimeout(Timeout.ofMilliseconds(timeoutConfig.getSocketTimeout()))
                         .build()
         );
 
@@ -56,10 +57,10 @@ public class PersonServiceDifferentTimeoutHttpClientConfig {
                 .build();
     }
 
-    private HttpServiceProxyFactory createProxyFactory(long timeout) {
+    private HttpServiceProxyFactory createProxyFactory(TimeoutConfig timeoutConfig) {
         RestClient restClient = RestClient.builder()
                 .baseUrl(personServiceHostUrl)
-                .requestFactory(new HttpComponentsClientHttpRequestFactory(createHttpClient(timeout)))
+                .requestFactory(new HttpComponentsClientHttpRequestFactory(createHttpClient(timeoutConfig)))
                 .requestInterceptors(consumerList -> {
                     consumerList.add(new BasicAuthenticationInterceptor(personServiceHostUsername, personServiceHostPassword));
                     consumerList.add(new HttpLoggingInterceptor());
@@ -70,8 +71,8 @@ public class PersonServiceDifferentTimeoutHttpClientConfig {
     }
 
 
-    public PersonServiceDifferentTimeoutRestClient getPersonServiceRestClient(long timeout) {
-        return restClientMap.computeIfAbsent(timeout,
-                k -> createProxyFactory(timeout).createClient(PersonServiceDifferentTimeoutRestClient.class));
+    public PersonServiceDifferentTimeoutRestClient getPersonServiceRestClient(TimeoutConfig timeoutConfig) {
+        return restClientMap.computeIfAbsent(timeoutConfig,
+                k -> createProxyFactory(timeoutConfig).createClient(PersonServiceDifferentTimeoutRestClient.class));
     }
 }
