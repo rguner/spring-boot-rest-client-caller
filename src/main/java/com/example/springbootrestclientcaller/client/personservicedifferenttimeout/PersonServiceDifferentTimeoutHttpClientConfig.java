@@ -75,4 +75,13 @@ public class PersonServiceDifferentTimeoutHttpClientConfig {
         return restClientMap.computeIfAbsent(timeoutConfig,
                 k -> createProxyFactory(timeoutConfig).createClient(PersonServiceDifferentTimeoutRestClient.class));
     }
+
+    @Bean
+    public PersonServiceDifferentTimeoutRestClient personServiceDifferentTimeoutRestClient() {
+        TimeoutConfig timeoutConfig = TimeoutConfig.builder()
+                .build();
+        return restClientMap.computeIfAbsent(timeoutConfig,
+                k -> createProxyFactory(timeoutConfig).createClient(PersonServiceDifferentTimeoutRestClient.class));
+    }
+
 }
