@@ -36,7 +36,7 @@ public class PersonServiceDifferentTimeoutHttpClientConfig {
     @Value("${person.service.ws.socket.timeout:10000}")
     private long personServiceWsSocketTimeout;
 
-    Map<TimeoutConfig, PersonServiceDifferentTimeoutRestClient> restClientMap = new ConcurrentHashMap<>();
+    private Map<TimeoutConfig, PersonServiceDifferentTimeoutRestClient> restClientMap = new ConcurrentHashMap<>();
 
     private CloseableHttpClient createHttpClient(TimeoutConfig timeoutConfig) {
         RequestConfig requestConfig = RequestConfig.custom()

@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -29,5 +30,16 @@ public class PersonService {
         List<PersonNameAgeProjection> personNameAgeProjections = personServiceRestClient.getAllPersonsProjection();
         log.info("getAllPersonsProjection() duration: {} ms, returned {} records", (System.currentTimeMillis()- start), personNameAgeProjections.size());
         return personNameAgeProjections;
+    }
+
+    public String loadTest() {
+        long start = System.currentTimeMillis();
+        IntStream.range(0, 1000).forEach(index -> {
+            List<Person> persons = personServiceRestClient.getAllPersons();
+        });
+
+        String result = String.format("loadTest() duration: %d ms", (System.currentTimeMillis()- start));
+        log.info(result);
+        return result;
     }
 }

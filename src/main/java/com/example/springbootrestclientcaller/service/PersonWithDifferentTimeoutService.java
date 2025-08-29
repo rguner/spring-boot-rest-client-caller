@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -49,5 +50,23 @@ public class PersonWithDifferentTimeoutService {
         List<PersonNameAgeProjection> personNameAgeProjections = personServiceDifferentTimeoutRestClient.getAllPersonsProjection();
         log.info("getAllPersonsProjection() duration: {} ms, returned {} records", (System.currentTimeMillis()- start), personNameAgeProjections.size());
         return personNameAgeProjections;
+    }
+
+    public String loadTest() {
+        long start = System.currentTimeMillis();
+        IntStream.range(0, 1000).forEach(index -> {
+            TimeoutConfig timeoutConfig = TimeoutConfig.builder()
+                    .requestTimeout(6000 + index)
+                    .responseTimeout(6000)
+                    .socketTimeout(2000)
+                    .build();
+            PersonServiceDifferentTimeoutRestClient personServiceDifferentTimeoutRestClient =
+                    personServiceDifferentTimeoutHttpClientConfig.getPersonServiceRestClient(timeoutConfig);
+            List<Person> persons = personServiceDifferentTimeoutRestClient.getAllPersons();
+        });
+
+        String result = String.format("loadTest() duration: %d ms", (System.currentTimeMillis()- start));
+        log.info(result);
+        return result;
     }
 }

@@ -50,4 +50,14 @@ public class PersonController {
     public List<PersonNameAgeProjection> getAllPersonsProjectionWithDifferentTimeoutWithInjection() {
         return personWithDifferentTimeoutWithInjectionService.getAllPersonsWithProjectionsFromPersonService();
     }
+
+    @GetMapping("/loadtest1")
+    public String loadTest1() {
+        return personService.loadTest();
+    }
+
+    @GetMapping("/loadtest2")
+    public String loadTest2() {
+        return personWithDifferentTimeoutService.loadTest();
+    }
 }
